@@ -1,0 +1,123 @@
+---
+title: "PRCourse Project 1"
+author: "Abdulrhman Ashraf"
+date: "August 2, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading and preprocessing the data
+1- Load the data
+
+```{r}
+if(!file.exists("activity.zip")){
+        trainDataURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+        download.file(trainDataURL, destfile = "activity.zip")
+        unzip("activity.zip")
+}
+activityDataset <- read.csv("activity.csv")
+head(activityDataset)
+```
+2- Process/transform the data
+
+
+```{r}
+activityDataset$date <- as.Date(activityDataset$date, "%Y-%m-%d")
+activityDF <- as.data.frame(activityDataset)
+```
+
+## What is mean total number of steps taken per day?
+
+1- Calculate the total number of steps taken per day
+```{r}
+numOfSteps <- aggregate(steps ~ date, activityDF, sum, na.rm=TRUE)
+head(numOfSteps)
+```
+2- Make a histogram of the total number of steps taken each day
+```{r}
+barplot(numOfSteps$steps, xlab = "steps taken each day",  main = "Barplot")
+hist(numOfSteps$steps, xlab = "steps taken each day", main = "Histogram")
+```
+3- Calculate and report the mean and median of the total number of steps taken per day
+```{r}
+stepsMean <- mean(numOfSteps$steps, na.rm = TRUE)
+stepsMean 
+
+stepsMedian <- median(numOfSteps$steps, na.rm = TRUE)
+stepsMedian
+```
+
+## What is the average daily activity pattern?
+
+1- Make a time series plot of the 5-minute interval and the average number of steps taken.
+```{r}
+intervalSteps <- tapply(activityDF$steps, activityDF$interval, mean, na.rm = TRUE)
+plot(as.numeric(names(intervalSteps)), intervalSteps, xlab = "Interval", ylab = "Average steps number",
+     main = "Average number of steps", type = "l")
+```
+
+2- Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r}
+maxInterval <- sort(intervalSteps, decreasing = TRUE)[1]
+maxInterval
+```
+
+## Imputing missing values
+1- Calculate and report the total number of missing values in the dataset 
+```{r}
+numOfNA <- sum(is.na(activityDF$steps))
+numOfNA
+```
+
+2- Devise a strategy for filling in all of the missing values in the dataset.
+we use mean to replace NAs
+```{r}
+activityDF2 <- activityDF
+isNA <- which(is.na(activityDF2$steps))
+averagePerInteval <- tapply(activityDF2$steps, activityDF2$interval, mean, na.rm=TRUE, simplify = TRUE)
+```
+
+3- Create a new dataset that is equal to the original dataset but with the missing data filled in.
+```{r}
+activityDF2$steps[isNA] <- averagePerInteval[as.character(activityDF2$interval[isNA])]
+sum(is.na(activityDF2))
+```
+
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
+```{r}
+numOfSteps2 <- aggregate(steps ~ date, activityDF2, sum, na.rm=TRUE)
+hist(numOfSteps2$steps, xlab = "steps taken each day", main = "Histogram")
+```
+Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+```{r}
+stepsMean2 <- mean(numOfSteps2$steps, na.rm = TRUE)
+stepsMean2
+
+stepsMedian2 <- median(numOfSteps2$steps, na.rm = TRUE)
+stepsMedian2
+```
+
+the mean remain the same, but median increased.
+
+Are there differences in activity patterns between weekdays and weekends?
+
+1- Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+```{r}
+dayType <- ifelse(weekdays(activityDF2$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+dayType <- as.factor(dayType)
+activityDF2$dayType <- dayType
+head(activityDF2)
+```
+2- Make a panel plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days.
+```{r}
+intervalStepsWeekday <- tapply(activityDF2[activityDF2$dayType == "weekday",]$steps, activityDF2[activityDF2$dayType == "weekday",]$interval, mean, na.rm = TRUE)
+intervalStepsWeekend <- tapply(activityDF2[activityDF2$dayType == "weekend",]$steps, activityDF2[activityDF2$dayType == "weekend",]$interval, mean, na.rm = TRUE)
+par(mfrow=c(2,1))
+plot(as.numeric(names(intervalStepsWeekday)), intervalSteps, xlab = "Interval", ylab = "Average steps number",
+     main = "Weekdays average number of steps", type = "l")
+plot(as.numeric(names(intervalStepsWeekend)), intervalSteps, xlab = "Interval", ylab = "Average steps number",
+     main = "Weekends average number of steps", type = "l")
+```
